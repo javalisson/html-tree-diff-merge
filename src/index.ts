@@ -3,8 +3,8 @@
  *
  * You can use this file to manually test your implementation.
  */
-import { find_differences } from './find_differences';
-import { merge_trees } from './merge_trees';
+import { find_differences } from './find_differences.js';
+import { merge_trees } from './merge_trees.js';
 
 const beforeEdit = {
   tag: 'div',
