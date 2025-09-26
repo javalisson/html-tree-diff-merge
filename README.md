@@ -242,7 +242,3 @@ function merge_trees(tree1, tree2) {
   ```bash
   npm run build
   ```
-
-```
-
-```
