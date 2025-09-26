@@ -16,10 +16,9 @@
  * – Only attributes and text can be "modified"
  */
 export function find_differences(old_tree, new_tree) {
-    // TODO: Implement this function
-    // Hint: Use recursion to traverse both trees
-    // Hint: Build the path array as you recurse
-    // Hint: Handle null/undefined gracefully
-    return [];
-  }
-  
+  // TODO: Implement this function
+  // Hint: Use recursion to traverse both trees
+  // Hint: Build the path array as you recurse
+  // Hint: Handle null/undefined gracefully
+  return [];
+}

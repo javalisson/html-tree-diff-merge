@@ -1,6 +1,7 @@
 # HTML Tree Diffing
 
 ## Problem Context
+
 You're building a feature for a demo platform that tracks changes between two versions of the same HTML page and creates merged versions.
 
 ---
@@ -10,20 +11,20 @@ You're building a feature for a demo platform that tracks changes between two ve
 ```javascript
 // Version 1: Original webpage
 const beforeEdit = {
-    tag: 'div',
-    attributes: { class: 'container' },
-    children: [{ tag: 'p', children: [{ text: 'Hello World' }] }]
+  tag: "div",
+  attributes: { class: "container" },
+  children: [{ tag: "p", children: [{ text: "Hello World" }] }],
 };
 
 // Version 2: After user edits
 const afterEdit = {
-    tag: 'div',
-    attributes: { class: 'container updated' },
-    children: [{ tag: 'h1', children: [{ text: 'Welcome!' }] }]
+  tag: "div",
+  attributes: { class: "container updated" },
+  children: [{ tag: "h1", children: [{ text: "Welcome!" }] }],
 };
 
 // Your function detects: class changed, p->h1 change, text changed
-````
+```
 
 ---
 
@@ -41,12 +42,12 @@ Compare two HTML trees and return an array of differences.
 // Returns: Array of difference objects
 [
   {
-    type: 'added' | 'removed' | 'modified',
-    path: ['children', 0, 'attributes', 'class'],
-    oldValue: 'old',   // for modified/removed
-    newValue: 'new'    // for modified/added
-  }
-]
+    type: "added" | "removed" | "modified",
+    path: ["children", 0, "attributes", "class"],
+    oldValue: "old", // for modified/removed
+    newValue: "new", // for modified/added
+  },
+];
 ```
 
 ---
@@ -68,12 +69,13 @@ Merge two HTML trees with tree2 taking precedence in conflicts.
 
 ```javascript
 const htmlTree = {
-  tag: 'div',                      // Element tag name
-  attributes: { class: 'container' }, // Optional attributes object
-  children: [                      // Optional children array
-    { tag: 'p', children: [{ text: 'Hello' }] },
-    { text: 'Plain text' }         // Text nodes have only 'text'
-  ]
+  tag: "div", // Element tag name
+  attributes: { class: "container" }, // Optional attributes object
+  children: [
+    // Optional children array
+    { tag: "p", children: [{ text: "Hello" }] },
+    { text: "Plain text" }, // Text nodes have only 'text'
+  ],
 };
 ```
 
@@ -104,7 +106,7 @@ const htmlTree = {
  * – Edge case handling
  * – Testing and debugging approach
  */
- 
+
 // ====================================================================
 // PART 1: find_differences(old_tree, new_tree)
 // ====================================================================
@@ -211,34 +213,36 @@ function merge_trees(tree1, tree2) {
 
 ## Getting Started
 
-* Install dependencies:
+- Install dependencies:
 
   ```bash
   npm install
   ```
 
-* Run tests:
+- Run tests:
 
   ```bash
   npm test
   ```
 
-* Run in watch mode:
+- Run in watch mode:
 
   ```bash
   npm run test:watch
   ```
 
-* Run the demo script:
+- Run the demo script:
 
   ```bash
   npm start
   ```
 
-* Build:
+- Build:
 
   ```bash
   npm run build
   ```
+
+```
 
 ```

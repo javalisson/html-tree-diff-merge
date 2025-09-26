@@ -10,10 +10,9 @@
  * – Handle null/undefined gracefully: attributes -> {}, children -> []
  */
 export function merge_trees(tree1, tree2) {
-    // TODO: Implement this function
-    // Hint: Recurse through children
-    // Hint: Combine attributes with spread { ...tree1, ...tree2 }
-    // Hint: Do not mutate inputs; always return a new object
-    return tree2;
-  }
-  
+  // TODO: Implement this function
+  // Hint: Recurse through children
+  // Hint: Combine attributes with spread { ...tree1, ...tree2 }
+  // Hint: Do not mutate inputs; always return a new object
+  return tree2;
+}
