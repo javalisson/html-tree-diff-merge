@@ -1,50 +1,51 @@
-// tests/diff.test.ts
 import { describe, it, expect } from "vitest";
 import { find_differences } from "../src/find_differences.js";
+import type { Node, Difference } from "../src/types.js";
 
 /** Small helper to compare only the path sequence ordering */
-function extractPaths(diffs: Array<{ path: (string | number)[] }>) {
+function extractPaths(diffs: Difference[]): string[] {
   return diffs.map((d) => JSON.stringify(d.path));
 }
 
 describe("find_differences – basic behavior", () => {
   it("returns empty array for identical trees", () => {
-    const a = {
+    const a: Node = {
       tag: "div",
       attributes: { class: "box" },
       children: [{ text: "Hi" }],
     };
-    const b = {
+    const b: Node = {
       tag: "div",
       attributes: { class: "box" },
       children: [{ text: "Hi" }],
     };
 
-    expect(find_differences(a, b)).toEqual([]);
+    expect(find_differences(a, b)).toEqual<Difference[]>([]);
   });
 
   it("detects attribute modification", () => {
-    const a = { tag: "div", attributes: { class: "a" } };
-    const b = { tag: "div", attributes: { class: "b" } };
+    const a: Node = { tag: "div", attributes: { class: "a" } };
+    const b: Node = { tag: "div", attributes: { class: "b" } };
 
     const diffs = find_differences(a, b);
-    expect(diffs).toEqual([
+    const expected: Difference[] = [
       {
         type: "modified",
         path: ["attributes", "class"],
         oldValue: "a",
         newValue: "b",
       },
-    ]);
+    ];
+    expect(diffs).toEqual(expected);
   });
 
   it("detects attribute add and remove", () => {
-    const a = { tag: "div", attributes: { id: "x" } };
-    const b = { tag: "div", attributes: { class: "y" } };
+    const a: Node = { tag: "div", attributes: { id: "x" } };
+    const b: Node = { tag: "div", attributes: { class: "y" } };
 
     const diffs = find_differences(a, b);
     expect(diffs).toEqual(
-      expect.arrayContaining([
+      expect.arrayContaining<Difference>([
         { type: "removed", path: ["attributes", "id"], oldValue: "x" },
         { type: "added", path: ["attributes", "class"], newValue: "y" },
       ]),
@@ -53,33 +54,34 @@ describe("find_differences – basic behavior", () => {
   });
 
   it("detects text modification (same position)", () => {
-    const a = { tag: "p", children: [{ text: "Hello" }] };
-    const b = { tag: "p", children: [{ text: "Hello, world!" }] };
+    const a: Node = { tag: "p", children: [{ text: "Hello" }] };
+    const b: Node = { tag: "p", children: [{ text: "Hello, world!" }] };
 
     const diffs = find_differences(a, b);
-    expect(diffs).toEqual([
+    const expected: Difference[] = [
       {
         type: "modified",
         path: ["children", 0, "text"],
         oldValue: "Hello",
         newValue: "Hello, world!",
       },
-    ]);
+    ];
+    expect(diffs).toEqual(expected);
   });
 
   it("represents tag change as removed+added at tag path", () => {
-    const a = {
+    const a: Node = {
       tag: "div",
       children: [{ tag: "p", children: [{ text: "T" }] }],
     };
-    const b = {
+    const b: Node = {
       tag: "div",
       children: [{ tag: "h1", children: [{ text: "T" }] }],
     };
 
     const diffs = find_differences(a, b);
     expect(diffs).toEqual(
-      expect.arrayContaining([
+      expect.arrayContaining<Difference>([
         { type: "removed", path: ["children", 0, "tag"], oldValue: "p" },
         { type: "added", path: ["children", 0, "tag"], newValue: "h1" },
       ]),
@@ -87,11 +89,11 @@ describe("find_differences – basic behavior", () => {
   });
 
   it("child added and removed by position", () => {
-    const a = {
+    const a: Node = {
       tag: "ul",
       children: [{ tag: "li", children: [{ text: "One" }] }],
     };
-    const b = {
+    const b: Node = {
       tag: "ul",
       children: [
         { tag: "li", children: [{ text: "One" }] },
@@ -101,7 +103,7 @@ describe("find_differences – basic behavior", () => {
 
     const diffsAdd = find_differences(a, b);
     expect(diffsAdd).toEqual(
-      expect.arrayContaining([
+      expect.arrayContaining<Difference>([
         {
           type: "added",
           path: ["children", 1],
@@ -112,7 +114,7 @@ describe("find_differences – basic behavior", () => {
 
     const diffsRemove = find_differences(b, a);
     expect(diffsRemove).toEqual(
-      expect.arrayContaining([
+      expect.arrayContaining<Difference>([
         {
           type: "removed",
           path: ["children", 1],
@@ -123,15 +125,15 @@ describe("find_differences – basic behavior", () => {
   });
 
   it("element ↔ text at same index => removed + added at most specific leaf", () => {
-    const a = { tag: "span", children: [{ text: "plain" }] };
-    const b = {
+    const a: Node = { tag: "span", children: [{ text: "plain" }] };
+    const b: Node = {
       tag: "span",
       children: [{ tag: "strong", children: [{ text: "plain" }] }],
     };
 
     const diffs = find_differences(a, b);
     expect(diffs).toEqual(
-      expect.arrayContaining([
+      expect.arrayContaining<Difference>([
         { type: "removed", path: ["children", 0, "text"], oldValue: "plain" },
         { type: "added", path: ["children", 0, "tag"], newValue: "strong" },
       ]),
@@ -141,12 +143,12 @@ describe("find_differences – basic behavior", () => {
 
 describe("find_differences – real-world scenario from README", () => {
   it("detects class, p->h1, and text changes", () => {
-    const beforeEdit = {
+    const beforeEdit: Node = {
       tag: "div",
       attributes: { class: "container" },
       children: [{ tag: "p", children: [{ text: "Hello World" }] }],
     };
-    const afterEdit = {
+    const afterEdit: Node = {
       tag: "div",
       attributes: { class: "container updated" },
       children: [{ tag: "h1", children: [{ text: "Welcome!" }] }],
@@ -155,7 +157,7 @@ describe("find_differences – real-world scenario from README", () => {
     const diffs = find_differences(beforeEdit, afterEdit);
 
     expect(diffs).toEqual(
-      expect.arrayContaining([
+      expect.arrayContaining<Difference>([
         {
           type: "modified",
           path: ["attributes", "class"],
@@ -177,8 +179,8 @@ describe("find_differences – real-world scenario from README", () => {
 
 describe("find_differences – null/undefined handling", () => {
   it("treats missing attributes/children as empty", () => {
-    const a = { tag: "div" }; // no attributes/children
-    const b = {
+    const a: Node = { tag: "div" }; // no attributes/children
+    const b: Node = {
       tag: "div",
       attributes: { id: "root" },
       children: [{ text: "x" }],
@@ -186,7 +188,7 @@ describe("find_differences – null/undefined handling", () => {
 
     const diffs = find_differences(a, b);
     expect(diffs).toEqual(
-      expect.arrayContaining([
+      expect.arrayContaining<Difference>([
         { type: "added", path: ["attributes", "id"], newValue: "root" },
         { type: "added", path: ["children", 0], newValue: { text: "x" } },
       ]),
@@ -194,16 +196,16 @@ describe("find_differences – null/undefined handling", () => {
   });
 
   it("handles removing attributes and children back to empty", () => {
-    const a = {
+    const a: Node = {
       tag: "div",
       attributes: { id: "root" },
       children: [{ text: "x" }],
     };
-    const b = { tag: "div" };
+    const b: Node = { tag: "div" };
 
     const diffs = find_differences(a, b);
     expect(diffs).toEqual(
-      expect.arrayContaining([
+      expect.arrayContaining<Difference>([
         { type: "removed", path: ["attributes", "id"], oldValue: "root" },
         { type: "removed", path: ["children", 0], oldValue: { text: "x" } },
       ]),
@@ -213,7 +215,7 @@ describe("find_differences – null/undefined handling", () => {
 
 describe("find_differences – ordering (deterministic)", () => {
   it("reports tag before attributes before children (preorder)", () => {
-    const a = {
+    const a: Node = {
       tag: "section",
       attributes: { z: 1, a: 1 },
       children: [
@@ -221,7 +223,7 @@ describe("find_differences – ordering (deterministic)", () => {
         { tag: "em", children: [{ text: "x" }] },
       ],
     };
-    const b = {
+    const b: Node = {
       tag: "article", // tag change
       attributes: { a: 2, m: 0 }, // attr changes
       children: [
@@ -232,13 +234,9 @@ describe("find_differences – ordering (deterministic)", () => {
 
     const diffs = find_differences(a, b);
 
-    // We expect the order:
-    // 1) tag change at root
-    // 2) attributes (alphabetical keys) at root
-    // 3) children changes by ascending index (0 before 1)
     const paths = extractPaths(diffs);
     const expectedPrefixOrder = [
-      JSON.stringify(["tag"]), // removed/added pair may appear; we just check presence order among others
+      JSON.stringify(["tag"]), // root tag change
       JSON.stringify(["attributes", "a"]),
       JSON.stringify(["attributes", "m"]),
       JSON.stringify(["attributes", "z"]),
@@ -246,21 +244,17 @@ describe("find_differences – ordering (deterministic)", () => {
       JSON.stringify(["children", 1]),
     ];
 
-    // Check that each expected path appears and the sequence is non-decreasing index-wise
     let lastIndex = -1;
     for (const p of expectedPrefixOrder) {
       const idx = paths.findIndex((x) => x === p);
-      expect(idx, `Path ${p} should exist`).toBeGreaterThanOrEqual(0);
-      expect(idx, `Path ${p} should appear after previous`).toBeGreaterThan(
-        lastIndex,
-      );
+      expect(idx).toBeGreaterThan(lastIndex);
       lastIndex = idx;
     }
   });
 
   it("attributes are reported in ascending key order at a node", () => {
-    const a = { tag: "div", attributes: { zed: 1, alpha: 1, mid: 1 } };
-    const b = { tag: "div", attributes: { zed: 2, alpha: 2, mid: 2 } };
+    const a: Node = { tag: "div", attributes: { zed: 1, alpha: 1, mid: 1 } };
+    const b: Node = { tag: "div", attributes: { zed: 2, alpha: 2, mid: 2 } };
 
     const diffs = find_differences(a, b);
     const paths = extractPaths(diffs);
@@ -276,14 +270,14 @@ describe("find_differences – ordering (deterministic)", () => {
 
 describe("find_differences – deeper nesting / mixed structures", () => {
   it("handles nested elements + text changes", () => {
-    const a = {
+    const a: Node = {
       tag: "div",
       children: [
         { tag: "h1", children: [{ text: "T" }] },
         { tag: "p", attributes: { class: "x" }, children: [{ text: "A" }] },
       ],
     };
-    const b = {
+    const b: Node = {
       tag: "div",
       children: [
         { tag: "h1", children: [{ text: "T!" }] }, // text change
@@ -297,7 +291,7 @@ describe("find_differences – deeper nesting / mixed structures", () => {
 
     const diffs = find_differences(a, b);
     expect(diffs).toEqual(
-      expect.arrayContaining([
+      expect.arrayContaining<Difference>([
         {
           type: "modified",
           path: ["children", 0, "children", 0, "text"],
@@ -320,18 +314,18 @@ describe("find_differences – deeper nesting / mixed structures", () => {
   });
 
   it("treats different tags at same index as removed+added even if subtrees are similar", () => {
-    const a = {
+    const a: Node = {
       tag: "div",
       children: [{ tag: "em", children: [{ text: "x" }] }],
     };
-    const b = {
+    const b: Node = {
       tag: "div",
       children: [{ tag: "strong", children: [{ text: "x" }] }],
     };
 
     const diffs = find_differences(a, b);
     expect(diffs).toEqual(
-      expect.arrayContaining([
+      expect.arrayContaining<Difference>([
         { type: "removed", path: ["children", 0, "tag"], oldValue: "em" },
         { type: "added", path: ["children", 0, "tag"], newValue: "strong" },
       ]),

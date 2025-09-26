@@ -1,13 +1,14 @@
-// tests/merge.test.ts
 import { describe, it, expect } from "vitest";
 import { merge_trees } from "../src/merge_trees.js";
+import type { Node } from "../src/types.js";
 
 // Helper to ensure we don't mutate inputs
-function deepFreeze(obj) {
+function deepFreeze<T>(obj: T): T {
   if (obj && typeof obj === "object") {
     Object.freeze(obj);
-    for (const key of Object.keys(obj)) {
-      deepFreeze(obj[key]);
+    for (const key of Object.keys(obj as object)) {
+      // @ts-expect-error index access on generic
+      deepFreeze((obj as any)[key]);
     }
   }
   return obj;
@@ -15,26 +16,26 @@ function deepFreeze(obj) {
 
 describe("merge_trees — attributes", () => {
   it("merges attributes with tree2 taking precedence", () => {
-    const t1 = { tag: "div", attributes: { class: "a", id: "root" } };
-    const t2 = { tag: "div", attributes: { class: "b", "data-x": "1" } };
+    const t1: Node = { tag: "div", attributes: { class: "a", id: "root" } };
+    const t2: Node = { tag: "div", attributes: { class: "b", "data-x": "1" } };
 
     const merged = merge_trees(t1, t2);
-    expect(merged).toEqual({
+    expect(merged).toEqual<Node>({
       tag: "div",
       attributes: { id: "root", class: "b", "data-x": "1" },
     });
   });
 
   it("handles missing/null attributes and children as empty", () => {
-    const t1 = { tag: "div" }; // no attributes, no children
-    const t2 = {
+    const t1: Node = { tag: "div" }; // no attributes, no children
+    const t2: Node = {
       tag: "div",
       attributes: { id: "x" },
       children: [{ text: "hi" }],
     };
 
     const merged = merge_trees(t1, t2);
-    expect(merged).toEqual({
+    expect(merged).toEqual<Node>({
       tag: "div",
       attributes: { id: "x" },
       children: [{ text: "hi" }],
@@ -44,11 +45,11 @@ describe("merge_trees — attributes", () => {
 
 describe("merge_trees — children layout & deep merge", () => {
   it("uses tree2 structure and length for children", () => {
-    const t1 = {
+    const t1: Node = {
       tag: "ul",
       children: [{ tag: "li", children: [{ text: "A" }] }],
     };
-    const t2 = {
+    const t2: Node = {
       tag: "ul",
       children: [
         { tag: "li", children: [{ text: "B" }] },
@@ -57,7 +58,7 @@ describe("merge_trees — children layout & deep merge", () => {
     };
 
     const merged = merge_trees(t1, t2);
-    expect(merged).toEqual({
+    expect(merged).toEqual<Node>({
       tag: "ul",
       children: [
         { tag: "li", children: [{ text: "B" }] },
@@ -67,14 +68,14 @@ describe("merge_trees — children layout & deep merge", () => {
   });
 
   it("deep-merges aligned children (same tag at same index)", () => {
-    const t1 = {
+    const t1: Node = {
       tag: "div",
       children: [
         { tag: "p", attributes: { class: "old" }, children: [{ text: "One" }] },
         { tag: "span", children: [{ text: "Two (old)" }] },
       ],
     };
-    const t2 = {
+    const t2: Node = {
       tag: "div",
       children: [
         {
@@ -88,18 +89,15 @@ describe("merge_trees — children layout & deep merge", () => {
     };
 
     const merged = merge_trees(t1, t2);
-    expect(merged).toEqual({
+    expect(merged).toEqual<Node>({
       tag: "div",
       children: [
-        // child[0]: same tag 'p' => deep merge; attributes merged, text from tree2
         {
           tag: "p",
           attributes: { class: "new" },
           children: [{ text: "One (new)" }],
         },
-        // child[1]: same tag 'span' => take tree2 content
         { tag: "span", children: [{ text: "Two (new)" }] },
-        // child[2]: only in tree2 => included
         { tag: "em", children: [{ text: "Three" }] },
       ],
     });
@@ -108,31 +106,31 @@ describe("merge_trees — children layout & deep merge", () => {
 
 describe("merge_trees — identity mismatch replaces child", () => {
   it("element ↔ text at same index: takes tree2 child verbatim", () => {
-    const t1 = { tag: "span", children: [{ text: "plain" }] };
-    const t2 = {
+    const t1: Node = { tag: "span", children: [{ text: "plain" }] };
+    const t2: Node = {
       tag: "span",
       children: [{ tag: "strong", children: [{ text: "bold" }] }],
     };
 
     const merged = merge_trees(t1, t2);
-    expect(merged).toEqual({
+    expect(merged).toEqual<Node>({
       tag: "span",
       children: [{ tag: "strong", children: [{ text: "bold" }] }],
     });
   });
 
   it("different tags at same index: takes tree2 child verbatim", () => {
-    const t1 = {
+    const t1: Node = {
       tag: "div",
       children: [{ tag: "em", children: [{ text: "x" }] }],
     };
-    const t2 = {
+    const t2: Node = {
       tag: "div",
       children: [{ tag: "strong", children: [{ text: "y" }] }],
     };
 
     const merged = merge_trees(t1, t2);
-    expect(merged).toEqual({
+    expect(merged).toEqual<Node>({
       tag: "div",
       children: [{ tag: "strong", children: [{ text: "y" }] }],
     });
@@ -141,11 +139,11 @@ describe("merge_trees — identity mismatch replaces child", () => {
 
 describe("merge_trees — tag at root follows tree2", () => {
   it("root tag change: result tag equals tree2 tag", () => {
-    const t1 = { tag: "section", attributes: { "data-x": "1" } };
-    const t2 = { tag: "article", attributes: { id: "a" } };
+    const t1: Node = { tag: "section", attributes: { "data-x": "1" } };
+    const t2: Node = { tag: "article", attributes: { id: "a" } };
 
     const merged = merge_trees(t1, t2);
-    expect(merged).toEqual({
+    expect(merged).toEqual<Node>({
       tag: "article",
       attributes: { "data-x": "1", id: "a" },
     });
@@ -154,12 +152,12 @@ describe("merge_trees — tag at root follows tree2", () => {
 
 describe("merge_trees — immutability", () => {
   it("does not mutate inputs (attributes & children)", () => {
-    const t1 = deepFreeze({
+    const t1: Node = deepFreeze({
       tag: "div",
       attributes: { class: "a", id: "x" },
       children: [{ tag: "p", children: [{ text: "A" }] }],
     });
-    const t2 = deepFreeze({
+    const t2: Node = deepFreeze({
       tag: "div",
       attributes: { class: "b" },
       children: [
@@ -171,12 +169,12 @@ describe("merge_trees — immutability", () => {
     const merged = merge_trees(t1, t2);
 
     // Inputs must remain unchanged
-    expect(t1).toEqual({
+    expect(t1).toEqual<Node>({
       tag: "div",
       attributes: { class: "a", id: "x" },
       children: [{ tag: "p", children: [{ text: "A" }] }],
     });
-    expect(t2).toEqual({
+    expect(t2).toEqual<Node>({
       tag: "div",
       attributes: { class: "b" },
       children: [
@@ -185,8 +183,8 @@ describe("merge_trees — immutability", () => {
       ],
     });
 
-    // Merged content should reflect the strategy
-    expect(merged).toEqual({
+    // Merged content should follow the strategy
+    expect(merged).toEqual<Node>({
       tag: "div",
       attributes: { class: "b", id: "x" },
       children: [
@@ -199,10 +197,10 @@ describe("merge_trees — immutability", () => {
 
 describe("merge_trees — edge cases", () => {
   it("tree1 only (tree2 undefined-like): returns clone of tree1", () => {
-    const t1 = { tag: "div", attributes: { id: "x" } };
+    const t1: Node = { tag: "div", attributes: { id: "x" } };
     // @ts-expect-error intentionally passing undefined to simulate missing input
     const merged = merge_trees(t1, undefined);
-    expect(merged).toEqual({ tag: "div", attributes: { id: "x" } });
+    expect(merged).toEqual<Node>({ tag: "div", attributes: { id: "x" } });
     expect(merged).not.toBe(t1); // should be a new object
   });
 
@@ -212,18 +210,18 @@ describe("merge_trees — edge cases", () => {
       tag: "div",
       attributes: { id: "x" },
     });
-    expect(merged).toEqual({ tag: "div", attributes: { id: "x" } });
+    expect(merged).toEqual<Node>({ tag: "div", attributes: { id: "x" } });
   });
 
   it("keeps children order exactly as in tree2", () => {
-    const t1 = {
+    const t1: Node = {
       tag: "ol",
       children: [
         { tag: "li", children: [{ text: "1" }] },
         { tag: "li", children: [{ text: "2" }] },
       ],
     };
-    const t2 = {
+    const t2: Node = {
       tag: "ol",
       children: [
         { tag: "li", children: [{ text: "A" }] },
@@ -233,7 +231,7 @@ describe("merge_trees — edge cases", () => {
     };
 
     const merged = merge_trees(t1, t2);
-    expect(merged.children).toEqual([
+    expect(merged.children).toEqual<Node[] | null | undefined>([
       { tag: "li", children: [{ text: "A" }] },
       { tag: "li", children: [{ text: "B" }] },
       { tag: "li", children: [{ text: "C" }] },
