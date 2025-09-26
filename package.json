@@ -13,7 +13,9 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "examples": "tsx examples/*.ts"
+    "examples": "npm run examples:diff && npm run examples:merge",
+    "examples:diff": "tsx examples/diff_guide.ts",
+    "examples:merge": "tsx examples/merge_guide.ts"
   },
   "keywords": [],
   "author": "",

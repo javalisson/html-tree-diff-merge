@@ -6,45 +6,92 @@ function print(title: string, diffs: Difference[]) {
   console.log(JSON.stringify(diffs, null, 2));
 }
 
-// 1) Identity
-const idA: Node = {
-  tag: "div",
-  attributes: { class: "box" },
-  children: [{ text: "Hi" }],
-};
-const idB: Node = {
-  tag: "div",
-  attributes: { class: "box" },
-  children: [{ text: "Hi" }],
-};
-print("Identity (no diffs)", find_differences(idA, idB));
+/* --------------------------------------------------
+   1) Both missing → no diffs
+-------------------------------------------------- */
+const noneA: Node | undefined = undefined;
+const noneB: Node | undefined = undefined;
+print("1) Both missing", find_differences(noneA as any, noneB as any));
+/*
+[]
+*/
 
-// 2) Text
+/* --------------------------------------------------
+   2) Only right present → added
+-------------------------------------------------- */
+const onlyRight: Node = { tag: "p", children: [{ text: "new" }] };
+print("2) Only right present", find_differences(undefined as any, onlyRight));
+/*
+[
+  { "type": "added", "path": [], "newValue": { "tag": "p", "children": [{ "text": "new" }] } }
+]
+*/
+
+/* --------------------------------------------------
+   3) Only left present → removed
+-------------------------------------------------- */
+const onlyLeft: Node = { tag: "p", children: [{ text: "old" }] };
+print("3) Only left present", find_differences(onlyLeft, undefined as any));
+/*
+[
+  { "type": "removed", "path": [], "oldValue": { "tag": "p", "children": [{ "text": "old" }] } }
+]
+*/
+
+/* --------------------------------------------------
+   4) Text nodes (equal) → no diffs
+-------------------------------------------------- */
+const tEqA: Node = { text: "same" };
+const tEqB: Node = { text: "same" };
+print("4) Text equal", find_differences(tEqA, tEqB));
+/*
+[]
+*/
+
+/* --------------------------------------------------
+   5) Text nodes (different) → modified at `text`
+-------------------------------------------------- */
 const tA: Node = { text: "Hello" };
 const tB: Node = { text: "Hello, world!" };
-print("Text modification", find_differences(tA, tB));
+print("5) Text modified", find_differences(tA, tB));
+/*
+[
+  { "type": "modified", "path": ["text"], "oldValue": "Hello", "newValue": "Hello, world!" }
+]
+*/
 
-// 3) Attributes
-const aA: Node = { tag: "div", attributes: { class: "a", title: "old" } };
-const aB: Node = { tag: "div", attributes: { class: "b", id: "x" } };
-print("Attributes add/remove/modify", find_differences(aA, aB));
-
-// 4) Children
-const cA: Node = {
-  tag: "ul",
-  children: [{ tag: "li", children: [{ text: "One" }] }],
+/* --------------------------------------------------
+   6) Mismatched types (element ↔ text) → remove + add
+-------------------------------------------------- */
+const misA: Node = { tag: "span", children: [{ text: "plain" }] };
+const misB: Node = {
+  tag: "span",
+  children: [{ tag: "strong", children: [{ text: "plain" }] }],
 };
-const cB: Node = {
-  tag: "ul",
-  children: [
-    { tag: "li", children: [{ text: "One" }] },
-    { tag: "li", children: [{ text: "Two" }] },
-  ],
-};
-print("Child added", find_differences(cA, cB));
-print("Child removed", find_differences(cB, cA));
+print("6) Mismatch (text ↔ element)", find_differences(misA, misB));
+/*
+[
+  { "type": "removed", "path": ["children", 0, "text"], "oldValue": "plain" },
+  { "type": "added",   "path": ["children", 0, "tag"],  "newValue": "strong" }
+]
+*/
 
-// 5) Tag changes
+/* --------------------------------------------------
+   7) Elements with same tag → continue
+-------------------------------------------------- */
+const sameTagA: Node = { tag: "div", children: [{ text: "X" }] };
+const sameTagB: Node = { tag: "div", children: [{ text: "X" }] };
+print(
+  "7) Elements with same tag (no diff yet)",
+  find_differences(sameTagA, sameTagB),
+);
+/*
+[]
+*/
+
+/* --------------------------------------------------
+   8) Elements with different tags → removed + added at `tag`
+-------------------------------------------------- */
 const tagA: Node = {
   tag: "div",
   children: [{ tag: "p", children: [{ text: "T" }] }],
@@ -53,42 +100,77 @@ const tagB: Node = {
   tag: "div",
   children: [{ tag: "h1", children: [{ text: "T" }] }],
 };
-print("Tag change p → h1", find_differences(tagA, tagB));
+print("8) Tag change p → h1", find_differences(tagA, tagB));
+/*
+[
+  { "type": "removed", "path": ["children", 0, "tag"], "oldValue": "p" },
+  { "type": "added",   "path": ["children", 0, "tag"], "newValue": "h1" }
+]
+*/
 
-// 6) Type swaps
-const swapA: Node = { tag: "span", children: [{ text: "plain" }] };
-const swapB: Node = {
-  tag: "span",
-  children: [{ tag: "strong", children: [{ text: "plain" }] }],
+/* --------------------------------------------------
+   9) Attributes → added / removed / modified
+-------------------------------------------------- */
+const attrsA: Node = { tag: "div", attributes: { class: "a", title: "old" } };
+const attrsB: Node = { tag: "div", attributes: { class: "b", id: "x" } };
+print("9) Attributes add/remove/modify", find_differences(attrsA, attrsB));
+/*
+[
+  { "type": "modified", "path": ["attributes","class"], "oldValue": "a", "newValue": "b" },
+  { "type": "removed",  "path": ["attributes","title"], "oldValue": "old" },
+  { "type": "added",    "path": ["attributes","id"],    "newValue": "x" }
+]
+*/
+
+/* --------------------------------------------------
+   10) Children (presence by index) → added / removed
+-------------------------------------------------- */
+const childA1: Node = {
+  tag: "ul",
+  children: [{ tag: "li", children: [{ text: "One" }] }],
 };
-print("Type swap (text → element)", find_differences(swapA, swapB));
-
-// 7) Missing fields
-const missA: Node = { tag: "div" };
-const missB: Node = {
-  tag: "div",
-  attributes: { id: "root" },
-  children: [{ text: "x" }],
-};
-print("Missing → empty defaults", find_differences(missA, missB));
-
-// 8) Ordering
-const ordA: Node = {
-  tag: "section",
-  attributes: { z: 1, a: 1 },
+const childB1: Node = {
+  tag: "ul",
   children: [
-    { tag: "p", children: [{ text: "A" }] },
-    { tag: "em", children: [{ text: "x" }] },
+    { tag: "li", children: [{ text: "One" }] },
+    { tag: "li", children: [{ text: "Two" }] },
   ],
 };
-const ordB: Node = {
-  tag: "article",
-  attributes: { a: 2, m: 0 },
+print("10) Children presence (added)", find_differences(childA1, childB1));
+/*
+[
+  { "type": "added", "path": ["children", 1], "newValue": { "tag": "li", "children": [{ "text": "Two" }] } }
+]
+*/
+
+print("10) Children presence (removed)", find_differences(childB1, childA1));
+/*
+[
+  { "type": "removed", "path": ["children", 1], "oldValue": { "tag": "li", "children": [{ "text": "Two" }] } }
+]
+*/
+
+/* --------------------------------------------------
+   11) Recursion into paired children
+-------------------------------------------------- */
+const recA: Node = {
+  tag: "div",
+  children: [{ tag: "p", children: [{ text: "A" }] }],
+};
+const recB: Node = {
+  tag: "div",
   children: [{ tag: "p", children: [{ text: "B" }] }],
 };
-print("Deterministic order", find_differences(ordA, ordB));
+print("11) Recursion (diff inside child[0])", find_differences(recA, recB));
+/*
+[
+  { "type": "modified", "path": ["children",0,"children",0,"text"], "oldValue": "A", "newValue": "B" }
+]
+*/
 
-// 9) Combined scenario
+/* --------------------------------------------------
+   12) Combined nested scenario (ordering visible)
+-------------------------------------------------- */
 const beforeEdit: Node = {
   tag: "div",
   attributes: { class: "container" },
@@ -99,4 +181,15 @@ const afterEdit: Node = {
   attributes: { class: "container updated" },
   children: [{ tag: "h1", children: [{ text: "Welcome!" }] }],
 };
-print("README example", find_differences(beforeEdit, afterEdit));
+print(
+  "12) Combined: class + tag + text",
+  find_differences(beforeEdit, afterEdit),
+);
+/*
+[
+  { "type": "modified", "path": ["attributes","class"], "oldValue": "container", "newValue": "container updated" },
+  { "type": "removed",  "path": ["children",0,"tag"], "oldValue": "p" },
+  { "type": "added",    "path": ["children",0,"tag"], "newValue": "h1" },
+  { "type": "modified", "path": ["children",0,"children",0,"text"], "oldValue": "Hello World", "newValue": "Welcome!" }
+]
+*/

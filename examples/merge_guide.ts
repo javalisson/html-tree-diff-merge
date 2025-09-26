@@ -6,85 +6,136 @@ function print(title: string, result: Node) {
   console.log(JSON.stringify(result, null, 2));
 }
 
-// 1) Identity
-const sameA: Node = {
-  tag: "div",
-  attributes: { class: "box" },
-  children: [{ text: "Hi" }],
-};
-const sameB: Node = {
-  tag: "div",
-  attributes: { class: "box" },
-  children: [{ text: "Hi" }],
-};
-print("Identity (same nodes)", merge_trees(sameA, sameB));
+/* --------------------------------------------------
+   1) Both missing → nothing
+-------------------------------------------------- */
+// (Demonstration only; your public API usually won’t call this)
+const mNoneA: Node | undefined = undefined;
+const mNoneB: Node | undefined = undefined;
+// @ts-expect-error demo
+// print('1) Both missing', merge_trees(mNoneA, mNoneB));
 
-// 2) Only one side present
-const onlyLeft: Node = { tag: "p", children: [{ text: "solo" }] };
-// @ts-expect-error simulate missing right side
-print("Only left (clone)", merge_trees(onlyLeft, undefined));
-// @ts-expect-error simulate missing left side
-print(
-  "Only right (clone)",
-  merge_trees(undefined, { tag: "p", children: [{ text: "solo" }] }),
-);
+/* --------------------------------------------------
+   2) Only one side present → return that side (clone)
+-------------------------------------------------- */
+const mOnlyLeft: Node = { tag: "p", children: [{ text: "left" }] };
+const mOnlyRight: Node = { tag: "p", children: [{ text: "right" }] };
+// @ts-expect-error simulate missing right
+print("2) Only left present", merge_trees(mOnlyLeft, undefined));
+// @ts-expect-error simulate missing left
+print("2) Only right present", merge_trees(undefined, mOnlyRight));
 
-// 3) Text nodes
-const t1: Node = { text: "old" };
-const t2: Node = { text: "new" };
-print("Text nodes (tree2 wins)", merge_trees(t1, t2));
+/* --------------------------------------------------
+   3) Both text nodes → take text from right
+-------------------------------------------------- */
+const mtA: Node = { text: "old" };
+const mtB: Node = { text: "new" };
+print("3) Text nodes", merge_trees(mtA, mtB));
+/*
+{ "text": "new" }
+*/
 
-// 4) Elements
-const e1: Node = {
-  tag: "div",
-  attributes: { id: "root", class: "old" },
-  children: [{ tag: "p", children: [{ text: "One" }] }],
-};
-const e2: Node = {
+/* --------------------------------------------------
+   4) Mismatched types (element ↔ text) → take right verbatim
+-------------------------------------------------- */
+const mmA: Node = { tag: "span", children: [{ text: "plain" }] };
+const mmB: Node = { text: "replaced" };
+print("4) Mismatch (take right)", merge_trees(mmA, mmB));
+/*
+{ "text": "replaced" }
+*/
+
+/* --------------------------------------------------
+   5) Both elements → result tag from right
+-------------------------------------------------- */
+const tagLeft: Node = { tag: "section", attributes: { "data-x": "1" } };
+const tagRight: Node = { tag: "article", attributes: { id: "a" } };
+print("5) Result tag = right", merge_trees(tagLeft, tagRight));
+/*
+{ "tag": "article", "attributes": { "data-x": "1", "id": "a" } }
+*/
+
+/* --------------------------------------------------
+   6) Attributes → shallow merge (right overrides)
+-------------------------------------------------- */
+const attrLeft: Node = { tag: "div", attributes: { class: "old", id: "root" } };
+const attrRight: Node = {
   tag: "div",
   attributes: { class: "new", "data-x": "1" },
-  children: [{ tag: "p", children: [{ text: "One (updated)" }] }],
 };
-print("Elements merged", merge_trees(e1, e2));
+print("6) Attributes merged", merge_trees(attrLeft, attrRight));
+/*
+{ "tag": "div", "attributes": { "class": "new", "id": "root", "data-x": "1" } }
+*/
 
-// 5) Mismatched types
-const m1: Node = { tag: "span", children: [{ text: "plain" }] };
-const m2: Node = {
-  tag: "span",
-  children: [{ tag: "strong", children: [{ text: "bold" }] }],
-};
-print("Mismatched (element ↔ text)", merge_trees(m1, m2));
-
-// 6) Children merging
-const c1: Node = {
+/* --------------------------------------------------
+   7) Children → follow right’s order/length (align or replace)
+-------------------------------------------------- */
+const chLeft: Node = {
   tag: "ul",
   children: [
     { tag: "li", children: [{ text: "A" }] },
     { tag: "li", children: [{ text: "B(old)" }] },
   ],
 };
-const c2: Node = {
+const chRight: Node = {
   tag: "ul",
   children: [
-    { tag: "li", children: [{ text: "A" }] },
-    { tag: "li", children: [{ text: "B(new)" }] },
-    { tag: "li", children: [{ text: "C" }] },
+    { tag: "li", children: [{ text: "A" }] }, // aligned with left[0] (same tag) → deep merge
+    { tag: "li", children: [{ text: "B(new)" }] }, // aligned with left[1] → deep merge text
+    { tag: "li", children: [{ text: "C" }] }, // extra → taken verbatim from right
   ],
 };
-print("Children merged", merge_trees(c1, c2));
+print("7) Children merged", merge_trees(chLeft, chRight));
+/*
+{
+  "tag": "ul",
+  "children": [
+    { "tag": "li", "children": [{ "text": "A" }] },
+    { "tag": "li", "children": [{ "text": "B(new)" }] },
+    { "tag": "li", "children": [{ "text": "C" }] }
+  ]
+}
+*/
 
-// 7) Root tag change
-const r1: Node = { tag: "section", attributes: { "data-x": "1" } };
-const r2: Node = { tag: "article", attributes: { id: "a" } };
-print("Root tag change", merge_trees(r1, r2));
+/* --------------------------------------------------
+   8) Return element result
+-------------------------------------------------- */
+const retLeft: Node = {
+  tag: "div",
+  attributes: { class: "a" },
+  children: [{ tag: "p", children: [{ text: "X" }] }],
+};
+const retRight: Node = {
+  tag: "div",
+  attributes: { class: "b" },
+  children: [
+    { tag: "p", children: [{ text: "Y" }] },
+    { tag: "em", children: [{ text: "Z" }] },
+  ],
+};
+print("8) Returned element", merge_trees(retLeft, retRight));
 
-// 8) Immutability (inputs unchanged)
-const im1: Node = {
+/* --------------------------------------------------
+   9) Fallback (unusual shapes) → clone right
+-------------------------------------------------- */
+const weirdLeft: any = { weird: true };
+const weirdRight: Node = { tag: "div" };
+// @ts-expect-error demo unusual left shape
+print("9) Fallback to right clone", merge_trees(weirdLeft, weirdRight));
+/*
+{ "tag": "div" }
+*/
+
+/* --------------------------------------------------
+   10) Immutability & determinism (inputs unchanged)
+-------------------------------------------------- */
+const imLeft: Node = {
   tag: "div",
   attributes: { class: "a", id: "x" },
   children: [{ tag: "p", children: [{ text: "A" }] }],
 };
-const im2: Node = {
+const imRight: Node = {
   tag: "div",
   attributes: { class: "b" },
   children: [
@@ -92,7 +143,8 @@ const im2: Node = {
     { tag: "em", children: [{ text: "C" }] },
   ],
 };
-print("Immutability", merge_trees(im1, im2));
-console.log("\nOriginal inputs remain the same:");
-console.log(JSON.stringify(im1, null, 2));
-console.log(JSON.stringify(im2, null, 2));
+const merged = merge_trees(imLeft, imRight);
+print("10) Immutability result", merged);
+console.log("10) Inputs unchanged?");
+console.log(JSON.stringify(imLeft, null, 2));
+console.log(JSON.stringify(imRight, null, 2));
